@@ -9,4 +9,5 @@ func TodoRoutes(route fiber.Router) {
 	todo := route.Group("/todo")
 
 	todo.Get("/", handlers.GetTodos)
+	todo.Post("/", handlers.CreateTodo)
 }

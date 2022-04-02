@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/ariefro/todo-app-server/config"
 	"github.com/ariefro/todo-app-server/models"
@@ -41,6 +42,51 @@ func GetTodos(c *fiber.Ctx) error {
 		"status": "success",
 		"data": fiber.Map{
 			"todos": todos,
+		},
+	})
+}
+
+func CreateTodo(c *fiber.Ctx) error {
+	todoCollection := config.MI.DB.Collection(os.Getenv("TODO_COLLECTION"))
+
+	data := new(models.Todo)
+	fmt.Println(data)
+
+	err := c.BodyParser(&data)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": "error",
+			"message": "cannot parse JSON",
+			"error": err.Error(),
+		})
+	}
+
+	data.ID = nil
+	f := false
+	data.Completed = &f
+	data.CreatedAt = time.Now()
+	data.UpdatedAt = time.Now()
+
+	result, err := todoCollection.InsertOne(c.Context(), data)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": false,
+			"message": "cannot insert todo",
+			"error": err.Error(),
+		})
+	}
+
+	todo := &models.Todo{}
+	query := bson.D{{Key: "_id", Value: result.InsertedID}}
+	fmt.Println(bson.D{})
+
+	todoCollection.FindOne(c.Context(), query).Decode(todo)
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": true,
+		"data": todo,
+		"data todo": fiber.Map{
+			"todo": todo,
 		},
 	})
 }
