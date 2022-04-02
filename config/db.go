@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -19,19 +20,28 @@ type MongoInstance struct {
 var MI MongoInstance
 
 func ConnectDB() {
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	client, err := mongo.NewClient(options.Client().ApplyURI(os.Getenv("MONGO_URI")))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("MONGO_URI")))
-	defer func() {
-    if err = client.Disconnect(ctx); err != nil {
-        panic(err)
-    }
-	}()
+	err = client.Connect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
 	err = client.Ping(ctx, readpref.Primary())
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	fmt.Println("Database connected")
+	fmt.Println("Database connected!")
+
+	MI = MongoInstance{
+		Client: client,
+		DB:     client.Database(os.Getenv("DATABASE_NAME")),
+	}
 }

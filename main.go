@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/ariefro/todo-app-server/config"
+	"github.com/ariefro/todo-app-server/routes"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -20,6 +21,8 @@ func main() {
 	}
 
 	config.ConnectDB()
+
+	routes.TodoRoutes(app)
 
 	err = app.Listen(":8000")
 	if err != nil {
