@@ -10,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 func GetTodos(c *fiber.Ctx) error {
@@ -122,6 +123,76 @@ func GetTodo(c *fiber.Ctx) error {
 		"status": "success",
 		"data": fiber.Map{
 			"todo": todo,
+		},
+	})
+}
+
+func UpdateTodo(c *fiber.Ctx) error {
+	todoCollection := config.MI.DB.Collection(os.Getenv("TODO_COLLECTION"))
+
+	paramId := c.Params("id")
+	fmt.Println(paramId)
+
+	id, err := primitive.ObjectIDFromHex(paramId)
+	fmt.Println(id)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": "error",
+			"message": "cannont parse Id",
+			"error": err.Error(),
+		})
+	}
+
+	data := new(models.Todo)
+	err = c.BodyParser(data)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": "error",
+			"message": "cannot parse json",
+			"error": err,
+		})
+	}
+
+	query := bson.D{{Key: "_id", Value: id}}
+
+	var dataToUpdate bson.D
+
+	if data.Title != nil {
+		dataToUpdate = append(dataToUpdate, bson.E{Key: "title", Value: data.Title})
+	}
+
+	if data.Completed != nil {
+		dataToUpdate = append(dataToUpdate, bson.E{Key: "completed", Value: data.Completed})
+	}
+
+	dataToUpdate = append(dataToUpdate, bson.E{Key: "updatedAt", Value: time.Now()})
+
+	update := bson.D{{Key: "$set", Value: dataToUpdate}}
+
+	err = todoCollection.FindOneAndUpdate(c.Context(), query, update).Err()
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"status": "error",
+				"message": "todo not found",
+				"error": err,
+			})
+		}
+
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": "error",
+			"message": "cannot update todo",
+			"error": err,
+		})
+	}
+
+	todo := &models.Todo{}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": "success",
+		"data": fiber.Map{
+			"data": todo,
 		},
 	})
 }

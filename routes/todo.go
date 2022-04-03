@@ -13,4 +13,5 @@ func TodoRoutes(route fiber.Router) {
 	todo.Get("/", handlers.GetTodos)
 	todo.Post("/", handlers.CreateTodo)
 	todo.Get("/:id", handlers.GetTodo)
+	todo.Put("/:id", handlers.UpdateTodo)
 }
