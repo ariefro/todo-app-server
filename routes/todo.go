@@ -6,8 +6,11 @@ import (
 )
 
 func TodoRoutes(route fiber.Router) {
-	todo := route.Group("/todo")
+	api := route.Group("/api")
+
+	todo := api.Group("/todo")
 
 	todo.Get("/", handlers.GetTodos)
 	todo.Post("/", handlers.CreateTodo)
+	todo.Get("/:id", handlers.GetTodo)
 }

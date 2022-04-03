@@ -9,6 +9,7 @@ import (
 	"github.com/ariefro/todo-app-server/models"
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func GetTodos(c *fiber.Ctx) error {
@@ -70,7 +71,7 @@ func CreateTodo(c *fiber.Ctx) error {
 	result, err := todoCollection.InsertOne(c.Context(), data)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"status": false,
+			"status": "error",
 			"message": "cannot insert todo",
 			"error": err.Error(),
 		})
@@ -83,9 +84,43 @@ func CreateTodo(c *fiber.Ctx) error {
 	todoCollection.FindOne(c.Context(), query).Decode(todo)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"status": true,
+		"status": "success",
 		"data": todo,
 		"data todo": fiber.Map{
+			"todo": todo,
+		},
+	})
+}
+
+func GetTodo(c *fiber.Ctx) error {
+	todoCollection := config.MI.DB.Collection(os.Getenv("TODO_COLLECTION"))
+
+	paramId := c.Params("id")
+	id, err := primitive.ObjectIDFromHex(paramId)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": "error",
+			"message": "cannont parse Id",
+			"error": err.Error(),
+		})
+	}
+
+	todo := &models.Todo{}
+	
+	query := bson.D{{Key: "_id", Value: id}}
+
+	err = todoCollection.FindOne(c.Context(), query).Decode(todo)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"status": "error",
+			"message": "todo not found",
+			"error": err,
+		})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"status": "success",
+		"data": fiber.Map{
 			"todo": todo,
 		},
 	})
