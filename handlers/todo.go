@@ -196,3 +196,40 @@ func UpdateTodo(c *fiber.Ctx) error {
 		},
 	})
 }
+
+func DeleteTodo(c *fiber.Ctx) error {
+	todoCollection := config.MI.DB.Collection(os.Getenv("TODO_COLLECTION"))
+
+	paramId := c.Params("id")
+
+	id, err := primitive.ObjectIDFromHex(paramId)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": "error",
+			"message": "cannot parse json",
+			"error": err,
+		})
+	}
+
+	query := bson.D{{Key: "_id", Value: id}}
+
+	err = todoCollection.FindOneAndDelete(c.Context(), query).Err()
+
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"status": "error",
+				"message": "todo not found",
+				"error": err,
+			})
+		}
+
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"status": "error",
+			"message": "cannot delete todo",
+			"error": err,
+		})
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
